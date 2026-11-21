@@ -11,16 +11,39 @@
   const OKTAV = [90, 180, 204, 294, 384, 408, 498, 588, 678, 702, 792, 882, 906, 996, 1086, 1110, 1200];
   const KOMA = new Set([180, 384, 678, 882, 1086]);
 
-  // Sap: açık tel (0) + 1,5 oktav kadar perde
+  // Sap: açık tel (0) + perdeler. Varsayılan 17 aralıklı düzen; "Sazımı tanıt" ile kullanıcının
+  // kendi sazından ölçülen değerlerle değiştirilebilir (ayarla()).
   const PERDELER = [0];
-  for (let o = 0; o < 2; o++) for (const c of OKTAV) { const v = c + o * 1200; if (v <= 1698) PERDELER.push(v); }
-  // PERDELER[i] = i. perdenin sent değeri (0 = boş tel)
-
-  function perdeBilgi(i) {
-    const c = PERDELER[i];
-    const koma = KOMA.has(c % 1200);
-    return { no: i, sent: c, koma, yarim: koma ? null : Math.round(c / 100) };
+  let BILGI = [];
+  function varsayilanPerdeler() {
+    const l = [];
+    for (let o = 0; o < 2; o++) for (const c of OKTAV) { const v = c + o * 1200; if (v <= 1698) l.push(v); }
+    return l;
   }
+  // Her perdeyi en yakın yarım sese ata; aynı yarım sese düşenlerden en yakını "asıl", diğerleri koma.
+  function siniflandir(liste) {
+    const b = [{ no: 0, sent: 0, koma: false, yarim: 0 }];
+    const enIyi = {};
+    liste.forEach((c, i) => {
+      const y = Math.round(c / 100), sap = Math.abs(c - y * 100);
+      if (sap <= 30 && (!(y in enIyi) || sap < enIyi[y].sap)) enIyi[y] = { i, sap };
+    });
+    liste.forEach((c, i) => {
+      const y = Math.round(c / 100);
+      const asil = enIyi[y] && enIyi[y].i === i && y > 0;
+      b.push({ no: i + 1, sent: c, koma: !asil, yarim: asil ? y : null });
+    });
+    return b;
+  }
+  function ayarla(liste) {
+    liste = (liste && liste.length >= 5) ? liste.slice().sort((a, b) => a - b) : varsayilanPerdeler();
+    PERDELER.length = 0; PERDELER.push(0, ...liste);
+    BILGI = siniflandir(liste);
+    return PERDELER.length - 1;
+  }
+  ayarla(null);
+
+  function perdeBilgi(i) { return BILGI[i]; }
 
   // Bağlama düzeni: üst tel Re, orta tel Sol, alt tel La (notada)
   // Soldan sağa çizim sırası: üst, orta, alt
@@ -98,6 +121,7 @@
 
   // Tüm makul basılışları bul ve sırala
   function basilislar(ak, duzen = DUZEN, enFazla = 8, ustPerde = 20) {
+    ustPerde = Math.min(ustPerde, PERDELER.length - 1);
     const secenek = duzen.teller.map(t => {
       const s = [];
       for (let p = 0; p <= ustPerde; p++) {
@@ -158,7 +182,7 @@
     return { nota: ((yuvarlak % 12) + 12) % 12, sent: Math.round((midiF - yuvarlak) * 100), midi: midiF };
   }
 
-  const api = { NOTA, OKTAV, KOMA, PERDELER, perdeBilgi, DUZEN, TUR, akor, SEVIYELER, TUM_AKORLAR, akorBul,
+  const api = { NOTA, OKTAV, KOMA, PERDELER, perdeBilgi, ayarla, varsayilanPerdeler, DUZEN, TUR, akor, SEVIYELER, TUM_AKORLAR, akorBul,
     perdeNota, basilisKontrol, basilislar, AHENKLER, frekans, frekanstanNota };
   if (typeof module !== 'undefined') module.exports = api; else root.Kuram = api;
 })(this);

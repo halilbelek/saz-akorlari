@@ -24,19 +24,23 @@
   <!-- AKORLAR -->
   <section id="s-akorlar" class="sayfa aktif">
     <div class="kart akor-kart">
-      <div class="sap-kutu"><svg id="akorSap" class="sap"></svg></div>
-      <div class="akor-bilgi">
-        <div class="akor-ad" id="akorAd">Lam</div>
-        <div class="ikincil" id="akorUzun">La minör</div>
-        <div class="tonlar" id="akorTonlar"></div>
-        <div class="basilis-sec">
-          <button class="kucuk" id="oncekiBasilis" aria-label="Önceki basılış">‹</button>
-          <span id="basilisNo">1 / 6</span>
-          <button class="kucuk" id="sonrakiBasilis" aria-label="Sonraki basılış">›</button>
+      <div class="akor-ust">
+        <div>
+          <div class="akor-ad" id="akorAd">Lam</div>
+          <div class="ikincil" id="akorUzun">La minör</div>
         </div>
-        <div class="ikincil kucuk-yazi" id="basilisKonum"></div>
-        <button class="birincil" id="calTopluca">▶ Tezene vur</button>
-        <button id="calTelTel">♪ Tel tel çal</button>
+        <div class="tonlar" id="akorTonlar"></div>
+      </div>
+      <div class="basilis-sec">
+        <button class="kucuk" id="oncekiBasilis" aria-label="Önceki basılış">‹</button>
+        <span id="basilisNo">1 / 6</span>
+        <button class="kucuk" id="sonrakiBasilis" aria-label="Sonraki basılış">›</button>
+        <span class="ikincil kucuk-yazi" id="basilisKonum"></span>
+      </div>
+      <svg id="akorSap" class="sap buyuk-sap"></svg>
+      <div class="dugme-satir">
+        <button class="birincil" id="calTopluca" style="flex:2">▶ Tezene vur</button>
+        <button id="calTelTel">♪ Tel tel</button>
       </div>
     </div>
     <div class="ipucu" id="akorIpucu"></div>
@@ -46,7 +50,7 @@
       <button id="serbestGoster">Göster</button>
     </div>
     <p class="hata" id="serbestHata"></p>
-    <p class="aciklama">Kesikli çizgiler koma perdeleridir; akorlarda bunlara basılmaz. Soldaki sayılar sapın başından itibaren perde numarasıdır.</p>
+    <p class="aciklama">Soldaki sayılar eşikten itibaren perde numarasıdır. Soluk küçük numaralar koma perdeleridir; akorlarda bunlara basılmaz.</p>
   </section>
 
   <!-- ALIŞTIRMA -->
@@ -68,8 +72,8 @@
           <button class="kucuk" id="sapAsagi" aria-label="Sapta aşağı">▼</button>
         </div>
       </div>
-      <div class="sap-kutu genis"><svg id="soruSap" class="sap"></svg></div>
-      <p class="ikincil kucuk-yazi ortala">Her telde basacağın perdeye dokun. Sapın üstüne dokunursan tel boş çalar.</p>
+      <svg id="soruSap" class="sap buyuk-sap"></svg>
+      <p class="ikincil kucuk-yazi ortala">Her telde basacağın perdeye dokun. Eşiğin üstüne dokunursan tel boş çalar.</p>
       <div class="geri-bildirim" id="geriBildirim" hidden></div>
       <div class="kroma" id="kroma" hidden></div>
       <div class="dugme-satir">
@@ -155,6 +159,26 @@
       <select id="ahenk"></select>
       <p class="aciklama">Kısa sap sazlar boylarına göre farklı ahenkte akort edilir. Bilmiyorsan hocana ya da sazı aldığın yere sor. Akort aleti ve uygulamanın sesleri buna göre ayarlanır. Oktav fark etmez.</p>
     </div>
+    <div class="kart" id="tanitKart">
+      <h3 class="kart-baslik">Sazımı tanıt</h3>
+      <p class="ikincil kucuk-yazi" id="tanitDurum"></p>
+      <div id="tanitAdim" hidden>
+        <div class="tanit-yonerge" id="tanitYonerge">Alt teli boş çal</div>
+        <div class="tanit-olcum" id="tanitOlcum">Dinliyorum…</div>
+        <div class="tanit-cubuk"><i id="tanitCubuk"></i></div>
+        <div class="dugme-satir">
+          <button id="tanitGeri">‹ Geri</button>
+          <button class="birincil" id="tanitBitir">Bitir ve kaydet</button>
+        </div>
+      </div>
+      <div class="tanit-liste" id="tanitListe"></div>
+      <p class="hata" id="tanitHata"></p>
+      <div class="dugme-satir" id="tanitDugmeler">
+        <button class="birincil" id="tanitBasla">🎤 Ölçmeye başla</button>
+        <button id="tanitSifirla">Standart düzen</button>
+      </div>
+      <p class="aciklama">Sazını akort et. Sonra alt teli önce boş, sonra eşikten başlayarak her perdede sırayla birer kez çal. Her perdeyi uygulama kendisi algılar ve sıradakine geçer. Sapın gövdeye birleştiği yere kadar gidebilirsin. Sap çizimi ve akorlar senin perdelerine göre hesaplanır.</p>
+    </div>
     <p class="aciklama">Bağlama düzeni: üst tel Re, orta tel Sol, alt tel La (notada). Üst ve alt telde bir oktav pes "bam" teli de vardır.</p>
   </section>
 </main>
@@ -171,6 +195,7 @@
 
 <script src="theory.js"></script>
 <script src="turkuler.js"></script>
+<script src="sap.js"></script>
 <script src="ses.js"></script>
 <script src="app.js"></script>
 </body>

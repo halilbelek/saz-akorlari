@@ -14,6 +14,7 @@
     { id: 1, ad: 'Örnek alıştırma – La karar', akorlar: 'Lam Sol Fa Mi', usul: '4/4', tempo: 70, not: 'Kendi türkülerini "Yeni türkü ekle" ile kaydet.' },
     { id: 2, ad: 'Örnek alıştırma – 9/8 oyun havası', akorlar: 'Lam Rem Mi Lam', usul: '9/8', tempo: 90, not: '' }
   ];
+  K.ayarla(D.perdeler || null);
   function kaydet() { try { localStorage.setItem(ANAHTAR, JSON.stringify(D)); } catch (e) {} }
 
   function bildir(m) {
@@ -42,69 +43,7 @@
     if (ebeveyn) ebeveyn.appendChild(e);
     return e;
   }
-  // secenek: { basilis:[3], ilk, son, isaret:{yanlis:[telIdx]}, sinif, etiket:true, tikla(tel, perde) }
-  function sapCiz(svg, s) {
-    while (svg.firstChild) svg.removeChild(svg.firstChild);
-    const ilk = s.ilk || 0, son = s.son;
-    const W = 200, ustBos = 34, H = s.yukseklik || 380, alt = 22;
-    svg.setAttribute('viewBox', `0 0 ${W} ${ustBos + H + alt}`);
-    const x = [62, 110, 158];
-    const y = c => ustBos + (poz(c) - poz(K.PERDELER[ilk])) / (poz(K.PERDELER[son]) - poz(K.PERDELER[ilk])) * H;
-    el('rect', { x: 40, y: ustBos, width: 140, height: H, rx: 3, class: 'zemin' }, svg);
-    if (ilk === 0) el('rect', { x: 38, y: ustBos - 5, width: 144, height: 6, rx: 1, class: 'esik' }, svg);
-    for (let p = ilk + 1; p <= son; p++) {
-      const b = K.perdeBilgi(p), yy = y(b.sent);
-      el('line', { x1: 40, x2: 180, y1: yy, y2: yy, class: 'perde' + (b.koma ? ' koma' : '') }, svg);
-      const t = el('text', { x: 32, y: yy + 4, 'text-anchor': 'end', class: 'pno' }, svg);
-      t.textContent = p;
-    }
-    // sapta süs noktaları (bağlamada yaygın değil ama yön bulmayı kolaylaştırır): yok
-    x.forEach((xx, i) => el('line', { x1: xx, x2: xx, y1: ustBos - 4, y2: ustBos + H, class: 'tel', 'stroke-width': i === 1 ? 1.4 : 1.8 }, svg));
-    K.DUZEN.teller.forEach((t, i) => {
-      const e = el('text', { x: x[i], y: ustBos + H + 16, 'text-anchor': 'middle', class: 'tad' }, svg);
-      e.textContent = t.ad + ' ' + K.NOTA[t.nota];
-    });
-    // basılı noktalar
-    const nokY = p => {
-      const y1 = y(K.PERDELER[p - 1]), y2 = y(K.PERDELER[p]);
-      return y2 - y1 < 26 ? y2 - Math.min(11, (y2 - y1) / 2 + 4) : (y1 + y2) / 2;
-    };
-    if (s.basilis) s.basilis.forEach((p, i) => {
-      if (p == null) return;
-      const yanlis = s.isaret && s.isaret.yanlis && s.isaret.yanlis.includes(i);
-      const sinif = (yanlis ? ' yanlis' : '') + (s.secim ? ' secim' : '');
-      const nota = K.perdeNota(K.DUZEN.teller[i].nota, p);
-      const ad = nota == null ? 'k' : K.NOTA[nota];
-      if (p === 0) {
-        el('circle', { cx: x[i], cy: 13, r: 10, class: 'bos' + sinif }, svg);
-        if (s.etiket !== false) { const t = el('text', { x: x[i], y: 17, 'text-anchor': 'middle', class: 'bosyazi' }, svg); t.textContent = ad; }
-      } else if (p > ilk && p <= son) {
-        const cy = nokY(p);
-        el('circle', { cx: x[i], cy, r: 12, class: 'nokta' + sinif }, svg);
-        if (s.etiket !== false) { const t = el('text', { x: x[i], y: cy + 4, 'text-anchor': 'middle', class: 'nyazi' }, svg); t.textContent = ad; }
-      } else if (p > son || p <= ilk) {
-        const t = el('text', { x: x[i], y: p > son ? ustBos + H - 4 : ustBos + 14, 'text-anchor': 'middle', class: 'pno' }, svg);
-        t.textContent = (p > son ? '▼ ' : '▲ ') + p;
-      }
-    });
-    if (s.tikla) {
-      const r = el('rect', { x: 0, y: 0, width: W, height: ustBos + H, class: 'dokun' }, svg);
-      r.addEventListener('pointerdown', ev => {
-        const k = svg.getScreenCTM().inverse();
-        const pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
-        const q = pt.matrixTransform(k);
-        let tel = 0, mesafe = 1e9;
-        x.forEach((xx, i) => { const m = Math.abs(q.x - xx); if (m < mesafe) { mesafe = m; tel = i; } });
-        let perde;
-        if (q.y < ustBos) perde = ilk === 0 ? 0 : null;
-        if (perde === undefined) {
-          let en = 1e9;
-          for (let p = ilk + 1; p <= son; p++) { const m = Math.abs(q.y - nokY(p)); if (m < en) { en = m; perde = p; } }
-        }
-        if (perde != null) s.tikla(tel, perde);
-      });
-    }
-  }
+  function sapCiz(svg, s) { window.GercekSap.ciz(svg, Object.assign({ K }, s)); }
   // Bir basılış için uygun pencere
   function pencere(perdeler, uzunluk = 9) {
     const basili = perdeler.filter(p => p > 0);
@@ -131,7 +70,7 @@
   const BASLIK = { akorlar: 'Akorlar', alistirma: 'Alıştırma', gecisler: 'Geçişler', defter: 'Türkü defteri', akort: 'Akort' };
   let aktifSayfa = 'akorlar';
   function sayfaAc(ad) {
-    if (aktifSayfa === 'akort' && ad !== 'akort') akortDurdur();
+    if (aktifSayfa === 'akort' && ad !== 'akort') { akortDurdur(); tanitDurdur(); }
     if (aktifSayfa === 'alistirma' && ad !== 'alistirma') dinlemeDurdur();
     aktifSayfa = ad;
     document.querySelectorAll('.sayfa').forEach(s => s.classList.toggle('aktif', s.id === 's-' + ad));
@@ -179,10 +118,10 @@
     $('akorTonlar').innerHTML = a.tonlar.map(t => `<span class="ton">${K.NOTA[t]}</span>`).join('');
     if (!b) {
       $('basilisNo').textContent = '0 / 0'; $('basilisKonum').textContent = 'Bu akor için rahat bir basılış bulunamadı.';
-      sapCiz($('akorSap'), { ilk: 0, son: 9 }); $('akorIpucu').textContent = ''; return;
+      sapCiz($('akorSap'), { ilk: 0, son: Math.min(10, K.PERDELER.length - 1) }); $('akorIpucu').textContent = ''; return;
     }
     $('basilisNo').textContent = `${secNo + 1} / ${secBasilislar.length}`;
-    const pen = pencere(b.perdeler);
+    const pen = pencere(b.perdeler, 10);
     $('basilisKonum').textContent = b.konum === 0 ? 'Sapın başında' : `${b.perdeler.filter(p => p > 0).sort((x, y) => x - y)[0]}. perde civarı`;
     sapCiz($('akorSap'), Object.assign({ basilis: b.perdeler }, pen));
     $('akorIpucu').textContent = ipucu(a, b);
@@ -251,9 +190,9 @@
   }
   function soruCiz(isaret, goster) {
     $('soruAd').textContent = soru.ad;
-    const son = Math.min(soruIlk + 12, K.PERDELER.length - 1);
+    const son = Math.min(soruIlk + 10, K.PERDELER.length - 1);
     sapCiz($('soruSap'), {
-      basilis: goster || cevap, ilk: soruIlk, son, yukseklik: 430, isaret, secim: !isaret && !goster,
+      basilis: goster || cevap, ilk: soruIlk, son, isaret, secim: !isaret && !goster,
       etiket: !!(isaret || goster),
       tikla: (tel, perde) => {
         if (soruBitti) return;
@@ -265,7 +204,7 @@
     });
   }
   $('sapYukari').addEventListener('click', () => { soruIlk = Math.max(0, soruIlk - 6); soruCiz(); });
-  $('sapAsagi').addEventListener('click', () => { soruIlk = Math.min(K.PERDELER.length - 13, soruIlk + 6); soruCiz(); });
+  $('sapAsagi').addEventListener('click', () => { soruIlk = Math.max(0, Math.min(K.PERDELER.length - 11, soruIlk + 6)); soruCiz(); });
   function kayitEt(dogru) {
     if (soruKayitli) return;
     soruKayitli = true;
@@ -310,7 +249,7 @@
   $('cevapGoster').addEventListener('click', () => {
     const b = K.basilislar(soru)[0]; if (!b) return;
     kayitEt(false); soruBitti = true;
-    const pen = pencere(b.perdeler, 12); soruIlk = Math.min(pen.ilk, K.PERDELER.length - 13);
+    const pen = pencere(b.perdeler, 10); soruIlk = Math.max(0, Math.min(pen.ilk, K.PERDELER.length - 11));
     geriBildirim('bilgi', `Bir basılış: üst ${b.perdeler[0]}, orta ${b.perdeler[1]}, alt ${b.perdeler[2]}. perde (0 = boş). Akorlar sekmesinde diğerlerini gör.`);
     soruCiz(null, b.perdeler);
     basilisCal(b.perdeler, true);
@@ -416,7 +355,7 @@
     const ciz = (svg, a) => {
       if (!a) { while (svg.firstChild) svg.removeChild(svg.firstChild); return; }
       const b = K.basilislar(a)[0];
-      if (b) sapCiz(svg, Object.assign({ basilis: b.perdeler, yukseklik: 260 }, pencere(b.perdeler, 8)));
+      if (b) sapCiz(svg, Object.assign({ basilis: b.perdeler, yukseklik: 380 }, pencere(b.perdeler, 8)));
     };
     ciz($('gecisSapSimdi'), gDizi[gIndex]);
     ciz($('gecisSapSonraki'), gDizi.length > 1 ? gDizi[(gIndex + 1) % gDizi.length] : null);
@@ -618,9 +557,107 @@
     if (akortTel === 'oto') bildir('Alt tel (La) referans sesi');
   });
 
+
+  // ---------- SAZIMI TANIT ----------
+  let tanit = null;
+  function tanitDurumYaz() {
+    $('tanitDurum').textContent = D.perdeler
+      ? `Senin sazından ölçülen ${D.perdeler.length} perde kullanılıyor.`
+      : 'Şu an standart 17 aralıklı perde düzeni kullanılıyor. Kendi sazının perdelerini ölçtürmek için başla.';
+    $('tanitSifirla').hidden = !D.perdeler;
+  }
+  function tanitEtiket(c) {
+    const y = Math.round(c / 100), sap = Math.round(c - y * 100);
+    return { ad: K.NOTA[(9 + y) % 12], sap, koma: Math.abs(sap) > 30 };
+  }
+  function tanitListeCiz(liste) {
+    $('tanitListe').innerHTML = liste.map((c, i) => {
+      const e = tanitEtiket(c);
+      return `<span class="${e.koma ? 'koma' : ''}">${i + 1}: ${e.ad}${e.sap ? (e.sap > 0 ? ' +' : ' ') + e.sap : ''}</span>`;
+    }).join('');
+  }
+  function tanitYonerge() {
+    const n = tanit.liste.length;
+    $('tanitYonerge').textContent = tanit.f0 == null ? 'Alt teli boş çal' : `${n + 1}. perdeye bas, alt teli çal`;
+    $('tanitGeri').disabled = tanit.f0 == null;
+  }
+  function tanitDurdur() {
+    if (!tanit) return;
+    cancelAnimationFrame(tanit.dongu); S.mikrofonKapat();
+    tanit = null; $('tanitAdim').hidden = true; $('tanitDugmeler').hidden = false;
+  }
+  $('tanitBasla').addEventListener('click', async () => {
+    akortDurdur();
+    try { await S.mikrofonAc(); } catch (e) { $('tanitHata').textContent = 'Mikrofon açılamadı. Tarayıcı ayarlarından izin ver.'; return; }
+    $('tanitHata').textContent = '';
+    tanit = { f0: null, liste: [], okuma: [], dongu: 0 };
+    $('tanitAdim').hidden = false; $('tanitDugmeler').hidden = true;
+    tanitListeCiz([]); tanitYonerge();
+    const dongu = () => {
+      if (!tanit) return;
+      const r = S.perdeBul();
+      if (r && r.f) {
+        const onceki = tanit.liste.length ? tanit.liste[tanit.liste.length - 1] : 0;
+        let c = tanit.f0 == null ? 0 : 1200 * Math.log2(r.f / tanit.f0);
+        if (tanit.f0 != null) { while (c < onceki - 300) c += 1200; while (c > onceki + 900) c -= 1200; }
+        tanit.okuma.push(tanit.f0 == null ? 1200 * Math.log2(r.f / 440) : c);
+        if (tanit.okuma.length > 14) tanit.okuma.shift();
+        const o = tanit.okuma, ort = o.reduce((a, b) => a + b, 0) / o.length;
+        const kararli = o.length >= 12 && Math.max(...o) - Math.min(...o) < 12;
+        $('tanitCubuk').style.width = Math.round(100 * Math.min(1, o.length / 12) * (kararli ? 1 : 0.6)) + '%';
+        if (tanit.f0 == null) {
+          const n = K.frekanstanNota(r.f, D.ahenk);
+          $('tanitOlcum').textContent = `Duyulan: ${K.NOTA[n.nota]} ${n.sent > 0 ? '+' : ''}${n.sent} sent`;
+          if (kararli) {
+            tanit.f0 = 440 * Math.pow(2, ort / 1200); tanit.okuma = [];
+            bildir('Boş tel kaydedildi'); tanitYonerge();
+          }
+        } else {
+          const e = tanitEtiket(c);
+          $('tanitOlcum').textContent = `Duyulan: ${e.ad} (${Math.round(c)} sent)`;
+          if (kararli) {
+            if (ort > onceki + 12 && ort < onceki + 260) {
+              tanit.liste.push(Math.round(ort)); tanit.okuma = [];
+              tanitListeCiz(tanit.liste); tanitYonerge();
+              if (ort > 1750) { $('tanitBitir').click(); return; }
+            } else if (ort <= onceki + 12 && Math.abs(ort - onceki) > 30) {
+              $('tanitOlcum').textContent = 'Bu ses bir önceki perdeden pes. Bir sonraki perdeye bas.';
+            }
+          }
+        }
+      } else if (tanit.okuma.length) tanit.okuma = [];
+      tanit.dongu = requestAnimationFrame(dongu);
+    };
+    dongu();
+  });
+  $('tanitGeri').addEventListener('click', () => {
+    if (!tanit) return;
+    if (tanit.liste.length) tanit.liste.pop(); else tanit.f0 = null;
+    tanit.okuma = []; tanitListeCiz(tanit.liste); tanitYonerge();
+  });
+  $('tanitBitir').addEventListener('click', () => {
+    if (!tanit) return;
+    if (tanit.liste.length < 5) { $('tanitHata').textContent = 'En az 5 perde ölçmelisin. Devam et ya da Geri ile düzelt.'; return; }
+    D.perdeler = tanit.liste.slice(); kaydet();
+    tanitDurdur(); yeniDuzen(); bildir(`${D.perdeler.length} perde kaydedildi`);
+  });
+  $('tanitSifirla').addEventListener('click', () => {
+    const b = $('tanitSifirla');
+    if (!b.dataset.emin) { b.dataset.emin = '1'; b.textContent = 'Emin misin?'; setTimeout(() => { b.dataset.emin = ''; b.textContent = 'Standart düzen'; }, 3000); return; }
+    D.perdeler = null; kaydet(); yeniDuzen(); bildir('Standart düzene dönüldü');
+  });
+  function yeniDuzen() {
+    K.ayarla(D.perdeler || null);
+    tanitDurumYaz(); tanitListeCiz(D.perdeler || []);
+    if (secAkor) akorSec(secAkor);
+    soru = null; soruIlk = 0;
+    gecisHazirla();
+  }
+  tanitDurumYaz(); tanitListeCiz(D.perdeler || []);
+
   // ---------- Başlat ----------
   akorSec(K.akorBul(D.sonAkor) || K.TUM_AKORLAR[0]);
   gecisKaynakDoldur(); gecisHazirla();
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
-  document.addEventListener('visibilitychange', () => { if (document.hidden) { akortDurdur(); dinlemeDurdur(); gecisDurdur(); } });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { akortDurdur(); tanitDurdur(); dinlemeDurdur(); gecisDurdur(); } });
 })();

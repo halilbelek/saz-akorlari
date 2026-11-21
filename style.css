@@ -49,7 +49,7 @@ textarea{resize:vertical}
 .cipler{display:flex;gap:6px;flex-wrap:wrap}.cipler.orta{justify-content:center}
 .serbest{display:flex;gap:8px;margin-top:12px}.serbest input{flex:1}
 
-.akor-kart{display:flex;gap:14px;align-items:flex-start;margin-top:0}
+.akor-kart{margin-top:0}
 .akor-liste{margin-top:14px}
 .sap-kutu{flex:0 0 auto}
 .sap{display:block;width:150px;height:auto;touch-action:manipulation;user-select:none;-webkit-user-select:none}
@@ -149,3 +149,20 @@ textarea{resize:vertical}
 .dize{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:4px 0}
 .dize .no{font-size:11px;color:var(--ikincil);width:16px}
 .zorluk{font-size:11px;padding:2px 8px;border-radius:99px;background:var(--yesil-acik);color:var(--yesil);margin-left:6px;vertical-align:middle}
+
+.akor-ust{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.akor-kart .basilis-sec{margin:8px 0 2px}
+.sap.buyuk-sap{width:100%;max-width:380px;margin:0 auto}
+.sap .pno{font-size:13px;fill:var(--ikincil)}
+.sap .pno.koma{font-size:10.5px;opacity:.6}
+.sap .tad{font-size:12px;fill:#4a3a28;font-weight:600}
+.sap .nyazi{font-size:13px;fill:#fff;font-weight:700}
+.sap .bosyazi{font-size:12px;fill:#2b2118;font-weight:700}
+.kart-baslik{margin:0 0 4px;font-size:17px}
+.tanit-yonerge{font-size:22px;font-weight:600;text-align:center;margin:10px 0 2px}
+.tanit-olcum{text-align:center;color:var(--ikincil);min-height:24px}
+.tanit-cubuk{height:8px;background:var(--cizgi);border-radius:4px;overflow:hidden;margin:8px 0}
+.tanit-cubuk i{display:block;height:8px;width:0;background:var(--yesil);transition:width .1s}
+.tanit-liste{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.tanit-liste span{font-size:12px;padding:3px 8px;border-radius:7px;background:var(--bg);border:1px solid var(--cizgi)}
+.tanit-liste span.koma{opacity:.6}
