@@ -380,11 +380,13 @@
 
   function gecisKaynakDoldur() {
     const s = $('gecisKaynak'), onceki = s.value;
-    s.innerHTML = '<option value="">Serbest – akorları kendin yaz</option>' + D.turkuler.map(t => `<option value="${t.id}">${kacis(t.ad)}</option>`).join('');
+    s.innerHTML = '<option value="">Serbest – akorları kendin yaz</option>' +
+      '<optgroup label="Hazır türküler">' + HAZIR.map(t => `<option value="${t.id}">${kacis(t.ad)}</option>`).join('') + '</optgroup>' +
+      (D.turkuler.length ? '<optgroup label="Benim defterim">' + D.turkuler.map(t => `<option value="${t.id}">${kacis(t.ad)}</option>`).join('') + '</optgroup>' : '');
     if ([...s.options].some(o => o.value === onceki)) s.value = onceki;
   }
   $('gecisKaynak').addEventListener('change', () => {
-    const t = D.turkuler.find(x => String(x.id) === $('gecisKaynak').value);
+    const t = tumTurkuler().find(x => String(x.id) === $('gecisKaynak').value);
     if (t) { $('gecisAkorlar').value = t.akorlar; usul = t.usul; usulCipleri(); $('tempo').value = t.tempo; $('tempoDeger').textContent = t.tempo; }
     gecisHazirla();
   });
@@ -453,10 +455,53 @@
   });
 
   // ---------- TÜRKÜ DEFTERİ ----------
-  let duzenlenen = null;
+  const HAZIR = (window.HAZIR_TURKULER || []).map(t => Object.assign({}, t, {
+    akorlar: t.bolumler.flatMap(b => b.satirlar).join(' ')
+  }));
+  function tumTurkuler() { return HAZIR.concat(D.turkuler); }
+  let duzenlenen = null, defterSekme = 'hazir';
+  document.querySelectorAll('#defterSekme button').forEach(b => b.addEventListener('click', () => {
+    defterSekme = b.dataset.d;
+    document.querySelectorAll('#defterSekme button').forEach(x => x.classList.toggle('secili', x === b));
+    defterCiz();
+  }));
+  function gecisteCalis(t) {
+    sayfaAc('gecisler'); $('gecisKaynak').value = String(t.id); $('gecisKaynak').dispatchEvent(new Event('change'));
+  }
+  function akorCipleri(metin) {
+    return akorDizisi(metin).dizi.map(a => `<button class="cip" data-akor="${kacis(a.ad)}">${kacis(a.ad)}</button>`).join('');
+  }
+  function hazirCiz() {
+    const l = $('hazirListe'); l.innerHTML = '';
+    HAZIR.forEach(t => {
+      const d = document.createElement('div'); d.className = 'turku';
+      const farkli = [...new Set(akorDizisi(t.akorlar).dizi.map(a => a.ad))];
+      const kilitli = farkli.filter(ad => { const a = K.akorBul(ad); return a && !akorAcik(a); });
+      d.innerHTML = `<h3>${kacis(t.ad)}<span class="zorluk">${kacis(t.seviye)}</span></h3>
+        <div class="ikincil kucuk-yazi">${kacis(t.yore)} · ${kacis(USULLER[t.usul].ad)} · ~${t.tempo} vuruş/dk · Akorlar: ${farkli.map(kacis).join(', ')}</div>
+        ${t.bolumler.map(b => `<div class="bolum"><div class="bolum-ad">${kacis(b.ad)}</div>${b.satirlar.map((s, i) => `<div class="dize"><span class="no">${i + 1}</span>${akorCipleri(s)}</div>`).join('')}</div>`).join('')}
+        ${t.not ? `<div class="not">${kacis(t.not)}</div>` : ''}
+        ${kilitli.length ? `<div class="not">Henüz açılmamış akorlar: ${kilitli.map(kacis).join(', ')}. Akorlar sekmesinde yine de görebilirsin.</div>` : ''}
+        <div class="dugme-satir"><button class="birincil" data-is="calis">Geçişlerde çalış</button><button data-is="kopya">Kopyala, düzenle</button></div>`;
+      d.querySelectorAll('[data-akor]').forEach(b => b.addEventListener('click', () => { sayfaAc('akorlar'); akorSec(K.akorBul(b.dataset.akor)); }));
+      d.querySelector('[data-is=calis]').addEventListener('click', () => gecisteCalis(t));
+      d.querySelector('[data-is=kopya]').addEventListener('click', () => {
+        defterSekme = 'benim';
+        document.querySelectorAll('#defterSekme button').forEach(x => x.classList.toggle('secili', x.dataset.d === 'benim'));
+        defterCiz();
+        formAc({ ad: t.ad, akorlar: t.akorlar, usul: t.usul, tempo: t.tempo, not: t.not }, true);
+      });
+      l.appendChild(d);
+    });
+    const a = document.createElement('p'); a.className = 'aciklama';
+    a.textContent = 'Akorlar gitar akor kaynaklarından alınıp La karara çevrildi. Sözler eklenmedi. Usul ve tempo yaklaşıktır, kaydı dinleyip ayarla. Yanlış bulduğun bir yer olursa Kopyala, düzenle ile kendi defterine al ve düzelt.';
+    l.appendChild(a);
+  }
   function kacis(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
   $('tUsul').innerHTML = Object.keys(USULLER).map(k => `<option value="${k}">${USULLER[k].ad}</option>`).join('');
   function defterCiz() {
+    $('hazirListe').hidden = defterSekme !== 'hazir'; $('benimKutu').hidden = defterSekme !== 'benim';
+    if (defterSekme === 'hazir') { hazirCiz(); return; }
     const l = $('turkuListe'); l.innerHTML = '';
     if (!D.turkuler.length) { l.innerHTML = '<div class="bos">Defterin boş. Çalmak istediğin türkünün akorlarını ekle.</div>'; return; }
     D.turkuler.forEach(t => {
@@ -467,9 +512,7 @@
         ${t.not ? `<div class="not">${kacis(t.not)}</div>` : ''}
         <div class="dugme-satir"><button class="birincil" data-is="calis">Geçişlerde çalış</button><button data-is="duzenle">Düzenle</button><button data-is="sil">Sil</button></div>`;
       d.querySelectorAll('[data-akor]').forEach(b => b.addEventListener('click', () => { sayfaAc('akorlar'); akorSec(K.akorBul(b.dataset.akor)); }));
-      d.querySelector('[data-is=calis]').addEventListener('click', () => {
-        sayfaAc('gecisler'); $('gecisKaynak').value = String(t.id); $('gecisKaynak').dispatchEvent(new Event('change'));
-      });
+      d.querySelector('[data-is=calis]').addEventListener('click', () => gecisteCalis(t));
       d.querySelector('[data-is=duzenle]').addEventListener('click', () => formAc(t));
       const sil = d.querySelector('[data-is=sil]');
       sil.addEventListener('click', () => {
@@ -479,8 +522,8 @@
       l.appendChild(d);
     });
   }
-  function formAc(t) {
-    duzenlenen = t || null;
+  function formAc(t, kopya) {
+    duzenlenen = kopya ? null : (t || null);
     $('tAd').value = t ? t.ad : ''; $('tAkor').value = t ? t.akorlar : ''; $('tUsul').value = t ? t.usul : '4/4';
     $('tTempo').value = t ? t.tempo : 80; $('tNot').value = t ? t.not : ''; $('tHata').textContent = '';
     $('turkuForm').hidden = false; $('yeniTurku').hidden = true;

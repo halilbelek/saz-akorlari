@@ -112,6 +112,12 @@
 
   <!-- TÜRKÜ DEFTERİ -->
   <section id="s-defter" class="sayfa">
+    <div class="sekme-sec" id="defterSekme">
+      <button data-d="hazir" class="secili">Hazır türküler</button>
+      <button data-d="benim">Benim defterim</button>
+    </div>
+    <div id="hazirListe"></div>
+    <div id="benimKutu" hidden>
     <button class="birincil buyuk" id="yeniTurku">+ Yeni türkü ekle</button>
     <div id="turkuListe"></div>
     <div class="kart" id="turkuForm" hidden>
@@ -130,6 +136,7 @@
         <button class="birincil" id="tKaydet">Kaydet</button>
         <button id="tIptal">Vazgeç</button>
       </div>
+    </div>
     </div>
   </section>
 
@@ -163,6 +170,7 @@
 <div class="bildirim" id="bildirim" hidden></div>
 
 <script src="theory.js"></script>
+<script src="turkuler.js"></script>
 <script src="ses.js"></script>
 <script src="app.js"></script>
 </body>
