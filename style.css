@@ -166,3 +166,5 @@ textarea{resize:vertical}
 .tanit-liste{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .tanit-liste span{font-size:12px;padding:3px 8px;border-radius:7px;background:var(--bg);border:1px solid var(--cizgi)}
 .tanit-liste span.koma{opacity:.6}
+.ses-ayar{display:flex;flex-direction:column;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--cizgi)}
+.ses-ayar button{align-self:flex-start}

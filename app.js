@@ -15,6 +15,18 @@
     { id: 2, ad: 'Örnek alıştırma – 9/8 oyun havası', akorlar: 'Lam Rem Mi Lam', usul: '9/8', tempo: 90, not: '' }
   ];
   K.ayarla(D.perdeler || null);
+  // Ses kayıtları IndexedDB'de (localStorage'a sığmaz)
+  function depo(islem) {
+    return new Promise((ok, hata) => {
+      let r; try { r = indexedDB.open('saz-akorlari', 1); } catch (e) { hata(e); return; }
+      r.onupgradeneeded = () => r.result.createObjectStore('sesler');
+      r.onerror = () => hata(r.error);
+      r.onsuccess = () => {
+        const db = r.result, tx = db.transaction('sesler', 'readwrite'), st = tx.objectStore('sesler');
+        const q = islem(st); tx.oncomplete = () => ok(q && q.result); tx.onerror = () => hata(tx.error);
+      };
+    });
+  }
   function kaydet() { try { localStorage.setItem(ANAHTAR, JSON.stringify(D)); } catch (e) {} }
 
   function bildir(m) {
@@ -56,14 +68,14 @@
   }
 
   // ---------- Çalma ----------
+  function telCal(i, p, zaman = 0, ses = 0.28) {
+    const f = K.frekans(i, p, D.ahenk);
+    if (D.ornekKullan !== false && S.ornekVar() && S.ornekCal(i, p, f, zaman, ses * 2)) return;
+    S.sazTeli(f, i !== 1, zaman, ses); // üst ve alt telde bam var
+  }
   function basilisCal(perdeler, tezene = true, gecikme = 0) {
     S.baglam();
-    perdeler.forEach((p, i) => {
-      if (p == null) return;
-      const f = K.frekans(i, p, D.ahenk);
-      const bam = i !== 1; // üst ve alt telde bam var
-      S.sazTeli(f, bam, gecikme + (tezene ? i * 0.028 : i * 0.45), 0.28);
-    });
+    perdeler.forEach((p, i) => { if (p != null) telCal(i, p, gecikme + (tezene ? i * 0.028 : i * 0.45)); });
   }
 
   // ---------- Sekmeler ----------
@@ -198,7 +210,7 @@
         if (soruBitti) return;
         cevap[tel] = cevap[tel] === perde ? null : perde;
         $('geriBildirim').hidden = true;
-        S.baglam(); if (cevap[tel] != null) S.sazTeli(K.frekans(tel, perde, D.ahenk), tel !== 1, 0, 0.22);
+        S.baglam(); if (cevap[tel] != null) telCal(tel, perde, 0, 0.22);
         soruCiz();
       }
     });
@@ -578,19 +590,23 @@
   }
   function tanitYonerge() {
     const n = tanit.liste.length;
-    $('tanitYonerge').textContent = tanit.f0 == null ? 'Alt teli boş çal' : `${n + 1}. perdeye bas, alt teli çal`;
-    $('tanitGeri').disabled = tanit.f0 == null;
+    const y = { orta: 'Şimdi orta teli boş çal', ust: 'Son olarak üst teli boş çal' }[tanit.asama];
+    $('tanitYonerge').textContent = y || (tanit.f0 == null ? 'Alt teli boş çal' : `${n + 1}. perdeye bas, alt teli çal`);
+    $('tanitGeri').disabled = tanit.f0 == null || tanit.asama !== 'perde';
+    $('tanitAtla').hidden = tanit.asama === 'perde';
+    $('tanitBitir').hidden = tanit.asama !== 'perde';
   }
   function tanitDurdur() {
     if (!tanit) return;
-    cancelAnimationFrame(tanit.dongu); S.mikrofonKapat();
+    cancelAnimationFrame(tanit.dongu); S.kayitBitir(); S.mikrofonKapat();
     tanit = null; $('tanitAdim').hidden = true; $('tanitDugmeler').hidden = false;
   }
   $('tanitBasla').addEventListener('click', async () => {
     akortDurdur();
     try { await S.mikrofonAc(); } catch (e) { $('tanitHata').textContent = 'Mikrofon açılamadı. Tarayıcı ayarlarından izin ver.'; return; }
     $('tanitHata').textContent = '';
-    tanit = { f0: null, liste: [], okuma: [], dongu: 0 };
+    tanit = { f0: null, liste: [], okuma: [], dongu: 0, asama: 'perde', isaret: [] };
+    S.kayitBasla();
     $('tanitAdim').hidden = false; $('tanitDugmeler').hidden = true;
     tanitListeCiz([]); tanitYonerge();
     const dongu = () => {
@@ -605,11 +621,25 @@
         const o = tanit.okuma, ort = o.reduce((a, b) => a + b, 0) / o.length;
         const kararli = o.length >= 12 && Math.max(...o) - Math.min(...o) < 12;
         $('tanitCubuk').style.width = Math.round(100 * Math.min(1, o.length / 12) * (kararli ? 1 : 0.6)) + '%';
-        if (tanit.f0 == null) {
+        if (tanit.asama !== 'perde') {
+          const n = K.frekanstanNota(r.f, D.ahenk);
+          $('tanitOlcum').textContent = `Duyulan: ${K.NOTA[n.nota]} ${n.sent > 0 ? '+' : ''}${n.sent} sent`;
+          const tel0 = tanit.asama === 'orta' ? 1 : 0;
+          const bek = 1200 * Math.log2(tanit.f0 / 440) + (tel0 === 1 ? -200 : -700);
+          let fark = ((ort - bek) % 1200 + 1200) % 1200; if (fark > 600) fark -= 1200;
+          if (kararli && Math.abs(fark) > 80) $('tanitOlcum').textContent += ' · bu, beklenen tel değil';
+          if (kararli && Math.abs(fark) <= 80) {
+            const tel = tel0;
+            tanit.isaret.push({ tel, perde: 0, f: 440 * Math.pow(2, ort / 1200), konum: S.kayitKonum() });
+            tanit.okuma = []; bildir((tel === 1 ? 'Orta' : 'Üst') + ' tel kaydedildi');
+            if (tel === 1) { tanit.asama = 'ust'; tanitYonerge(); } else { tanitKaydet(); return; }
+          }
+        } else if (tanit.f0 == null) {
           const n = K.frekanstanNota(r.f, D.ahenk);
           $('tanitOlcum').textContent = `Duyulan: ${K.NOTA[n.nota]} ${n.sent > 0 ? '+' : ''}${n.sent} sent`;
           if (kararli) {
             tanit.f0 = 440 * Math.pow(2, ort / 1200); tanit.okuma = [];
+            tanit.isaret.push({ tel: 2, perde: 0, f: tanit.f0, konum: S.kayitKonum() });
             bildir('Boş tel kaydedildi'); tanitYonerge();
           }
         } else {
@@ -618,6 +648,7 @@
           if (kararli) {
             if (ort > onceki + 12 && ort < onceki + 260) {
               tanit.liste.push(Math.round(ort)); tanit.okuma = [];
+              tanit.isaret.push({ tel: 2, perde: tanit.liste.length, f: tanit.f0 * Math.pow(2, ort / 1200), konum: S.kayitKonum() });
               tanitListeCiz(tanit.liste); tanitYonerge();
               if (ort > 1750) { $('tanitBitir').click(); return; }
             } else if (ort <= onceki + 12 && Math.abs(ort - onceki) > 30) {
@@ -633,14 +664,75 @@
   $('tanitGeri').addEventListener('click', () => {
     if (!tanit) return;
     if (tanit.liste.length) tanit.liste.pop(); else tanit.f0 = null;
+    tanit.isaret.pop();
     tanit.okuma = []; tanitListeCiz(tanit.liste); tanitYonerge();
   });
   $('tanitBitir').addEventListener('click', () => {
     if (!tanit) return;
     if (tanit.liste.length < 5) { $('tanitHata').textContent = 'En az 5 perde ölçmelisin. Devam et ya da Geri ile düzelt.'; return; }
-    D.perdeler = tanit.liste.slice(); kaydet();
-    tanitDurdur(); yeniDuzen(); bildir(`${D.perdeler.length} perde kaydedildi`);
+    tanit.asama = 'orta'; tanit.okuma = []; tanitYonerge();
   });
+  $('tanitAtla').addEventListener('click', () => {
+    if (!tanit) return;
+    if (tanit.asama === 'orta') { tanit.asama = 'ust'; tanitYonerge(); } else tanitKaydet();
+  });
+  // Kayıttan her işaret için bir ses parçası kes
+  function parcala(kayit, isaretler) {
+    const { veri, sr } = kayit, blok = Math.round(sr * 0.01);
+    const rms = i0 => { let t = 0; for (let i = i0; i < i0 + blok && i < veri.length; i++) t += veri[i] * veri[i]; return Math.sqrt(t / blok); };
+    const bas = [];
+    isaretler.forEach((m, k) => {
+      const ust = Math.min(m.konum, veri.length) - blok;
+      const alt = Math.max(0, m.konum - Math.round(sr * 1.3), k ? isaretler[k - 1].konum : 0);
+      let tepe = 0, tepeI = alt;
+      for (let i = alt; i < ust; i += blok) { const v = rms(i); if (v > tepe) { tepe = v; tepeI = i; } }
+      let on = tepeI;
+      while (on - blok > alt && rms(on - blok) > tepe * 0.2) on -= blok;
+      bas.push(Math.max(0, on - Math.round(sr * 0.01)));
+    });
+    return isaretler.map((m, k) => {
+      const b = bas[k], son = Math.min(b + Math.round(sr * 2.2), k + 1 < bas.length ? bas[k + 1] - Math.round(sr * 0.02) : veri.length, veri.length);
+      const v = veri.slice(b, Math.max(b + 1, son));
+      let mx = 0; for (const x of v) mx = Math.max(mx, Math.abs(x));
+      const k2 = mx > 0 ? 0.8 / mx : 1, sonik = Math.round(sr * 0.08), basik = Math.round(sr * 0.004);
+      for (let i = 0; i < v.length; i++) {
+        let g = k2;
+        if (i < basik) g *= i / basik;
+        if (i > v.length - sonik) g *= (v.length - i) / sonik;
+        v[i] *= g;
+      }
+      return { tel: m.tel, perde: m.perde, f: m.f, veri: v };
+    }).filter(o => o.veri.length > sr * 0.3);
+  }
+  function tanitKaydet() {
+    const isaret = tanit.isaret.slice();
+    D.perdeler = tanit.liste.slice();
+    const kayit = S.kayitBitir();
+    tanitDurdur();
+    if (kayit && isaret.length) {
+      const liste = parcala(kayit, isaret);
+      S.orneklerYukle(liste, kayit.sr);
+      D.ornekKullan = true; D.ornekSayisi = liste.length;
+      depo(st => st.put({ sr: kayit.sr, liste }, 'ornekler')).catch(() => bildir('Ses kayıtları bu telefonda saklanamadı'));
+    }
+    kaydet(); yeniDuzen(); sesAyarCiz();
+    bildir(`${D.perdeler.length} perde ve ${D.ornekSayisi || 0} ses kaydedildi`);
+    setTimeout(() => basilisCal([0, 0, 0], true), 400);
+  }
+  function sesAyarCiz() {
+    $('sesAyar').hidden = !S.ornekVar();
+    $('ornekKullan').checked = D.ornekKullan !== false;
+    $('ornekBilgi').textContent = `Kendi sazından ${D.ornekSayisi || 0} ses kaydı var.`;
+  }
+  $('ornekKullan').addEventListener('change', () => { D.ornekKullan = $('ornekKullan').checked; kaydet(); basilisCal([0, 0, 0], true); });
+  $('ornekSil').addEventListener('click', () => {
+    const b = $('ornekSil');
+    if (!b.dataset.emin) { b.dataset.emin = '1'; b.textContent = 'Emin misin?'; setTimeout(() => { b.dataset.emin = ''; b.textContent = 'Ses kayıtlarını sil'; }, 3000); return; }
+    S.orneklerYukle([], 24000); D.ornekSayisi = 0; kaydet();
+    depo(st => st.delete('ornekler')).catch(() => {});
+    sesAyarCiz(); bildir('Ses kayıtları silindi');
+  });
+  depo(st => st.get('ornekler')).then(o => { if (o && o.liste) { S.orneklerYukle(o.liste, o.sr); sesAyarCiz(); } }).catch(() => {});
   $('tanitSifirla').addEventListener('click', () => {
     const b = $('tanitSifirla');
     if (!b.dataset.emin) { b.dataset.emin = '1'; b.textContent = 'Emin misin?'; setTimeout(() => { b.dataset.emin = ''; b.textContent = 'Standart düzen'; }, 3000); return; }

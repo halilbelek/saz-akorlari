@@ -122,7 +122,68 @@
     mik = { akim, kaynak, analiz, zaman: new Float32Array(analiz.fftSize), frek: new Float32Array(analiz.frequencyBinCount) };
     return mik;
   }
+  // ---- Ham ses kaydı (Sazımı tanıt sırasında) ----
+  let kayit = null;
+  function kayitBasla() {
+    if (!mik) return;
+    const c = ctx, isl = c.createScriptProcessor(4096, 1, 1), sifir = c.createGain();
+    sifir.gain.value = 0;
+    kayit = { parcalar: [], uzunluk: 0, isl, sifir, sr: c.sampleRate };
+    isl.onaudioprocess = e => {
+      if (!kayit) return;
+      const d = e.inputBuffer.getChannelData(0);
+      // 2'ye indir (yarı örnekleme hızı) – bellek için
+      const y = new Float32Array(d.length >> 1);
+      for (let i = 0; i < y.length; i++) y[i] = 0.5 * (d[2 * i] + d[2 * i + 1]);
+      kayit.parcalar.push(y); kayit.uzunluk += y.length;
+      if (kayit.uzunluk > kayit.sr / 2 * 300) { const at = kayit.parcalar.shift().length; kayit.uzunluk -= at; kayit.atilan = (kayit.atilan || 0) + at; }
+    };
+    mik.kaynak.connect(isl); isl.connect(sifir); sifir.connect(c.destination);
+  }
+  function kayitKonum() { return kayit ? kayit.uzunluk + (kayit.atilan || 0) : 0; }
+  function kayitBitir() {
+    if (!kayit) return null;
+    try { mik && mik.kaynak.disconnect(kayit.isl); } catch (e) {}
+    try { kayit.isl.disconnect(); kayit.sifir.disconnect(); } catch (e) {}
+    const tum = new Float32Array(kayit.uzunluk); let o = 0;
+    for (const p of kayit.parcalar) { tum.set(p, o); o += p.length; }
+    const sonuc = { veri: tum, sr: kayit.sr / 2 };
+    kayit = null;
+    return sonuc;
+  }
+
+  // ---- Kendi saz sesinden örnekler ----
+  let ornekler = []; // {tel, perde, f, buf}
+  function orneklerYukle(liste, sr) {
+    const c = baglam();
+    ornekler = (liste || []).map(o => {
+      const veri = o.veri instanceof Float32Array ? o.veri : Float32Array.from(o.veri);
+      const b = c.createBuffer(1, veri.length, sr); b.getChannelData(0).set(veri);
+      return { tel: o.tel, perde: o.perde, f: o.f, buf: b };
+    });
+    return ornekler.length;
+  }
+  function ornekVar() { return ornekler.length > 0; }
+  function ornekCal(tel, perde, f, zaman = 0, ses = 0.6) {
+    if (!ornekler.length) return false;
+    let en = null, enP = 1e9;
+    for (const o of ornekler) {
+      const fark = Math.abs(1200 * Math.log2(f / o.f));
+      let p = fark;
+      if (o.tel === tel && o.perde === perde) p = -1;
+      else if (o.tel !== tel) p += 150; // aynı telin sesini tercih et
+      if (p < enP) { enP = p; en = o; }
+    }
+    const c = baglam(), t = c.currentTime + zaman;
+    const k = c.createBufferSource(); k.buffer = en.buf;
+    k.playbackRate.value = f / en.f;
+    const g = c.createGain(); g.gain.value = ses;
+    k.connect(g); g.connect(ana); k.start(t);
+    return true;
+  }
+
   function mikrofonKapat() {
+    if (kayit) kayitBitir();
     if (!mik) return;
     mik.akim.getTracks().forEach(t => t.stop());
     try { mik.kaynak.disconnect(); } catch (e) {}
@@ -178,5 +239,6 @@
     return { k, guc: toplam };
   }
 
-  root.Ses = { baglam, nota, sazTeli, tik, referans, mikrofonAc, mikrofonKapat, perdeBul, kroma, simdi: () => baglam().currentTime };
+  root.Ses = { baglam, nota, sazTeli, tik, referans, mikrofonAc, mikrofonKapat, perdeBul, kroma,
+    kayitBasla, kayitKonum, kayitBitir, orneklerYukle, ornekVar, ornekCal, simdi: () => baglam().currentTime };
 })(this);

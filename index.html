@@ -168,16 +168,22 @@
         <div class="tanit-cubuk"><i id="tanitCubuk"></i></div>
         <div class="dugme-satir">
           <button id="tanitGeri">‹ Geri</button>
-          <button class="birincil" id="tanitBitir">Bitir ve kaydet</button>
+          <button id="tanitAtla" hidden>Atla</button>
+          <button class="birincil" id="tanitBitir">Perdeler bitti</button>
         </div>
       </div>
       <div class="tanit-liste" id="tanitListe"></div>
       <p class="hata" id="tanitHata"></p>
+      <div class="ses-ayar" id="sesAyar" hidden>
+        <label class="anahtar"><input type="checkbox" id="ornekKullan" checked> Kendi saz sesimi kullan</label>
+        <span class="ikincil kucuk-yazi" id="ornekBilgi"></span>
+        <button class="kucuk" id="ornekSil">Ses kayıtlarını sil</button>
+      </div>
       <div class="dugme-satir" id="tanitDugmeler">
         <button class="birincil" id="tanitBasla">🎤 Ölçmeye başla</button>
         <button id="tanitSifirla">Standart düzen</button>
       </div>
-      <p class="aciklama">Sazını akort et. Sonra alt teli önce boş, sonra eşikten başlayarak her perdede sırayla birer kez çal. Her perdeyi uygulama kendisi algılar ve sıradakine geçer. Sapın gövdeye birleştiği yere kadar gidebilirsin. Sap çizimi ve akorlar senin perdelerine göre hesaplanır.</p>
+      <p class="aciklama">Sazını akort et. Sonra alt teli önce boş, sonra eşikten başlayarak her perdede sırayla birer kez çal. Her perdeyi uygulama kendisi algılar ve sıradakine geçer. Sapın gövdeye birleştiği yere kadar gidebilirsin. Sonra orta ve üst teli de birer kez boş çal. Sap çizimi ve akorlar senin perdelerine göre hesaplanır, uygulama da senin sazının kaydedilen sesiyle çalar. Kayıtlar sadece bu telefonda saklanır. Sessiz bir odada yap.</p>
     </div>
     <p class="aciklama">Bağlama düzeni: üst tel Re, orta tel Sol, alt tel La (notada). Üst ve alt telde bir oktav pes "bam" teli de vardır.</p>
   </section>
