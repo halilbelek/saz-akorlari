@@ -757,6 +757,11 @@
   // ---------- Başlat ----------
   akorSec(K.akorBul(D.sonAkor) || K.TUM_AKORLAR[0]);
   gecisKaynakDoldur(); gecisHazirla();
-  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(r => r.update()).catch(() => {});
+    // yeni sürüm devreye girince bir kez yenile
+    let yenilendi = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (!yenilendi) { yenilendi = true; location.reload(); } });
+  }
   document.addEventListener('visibilitychange', () => { if (document.hidden) { akortDurdur(); tanitDurdur(); dinlemeDurdur(); gecisDurdur(); } });
 })();
