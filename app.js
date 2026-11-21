@@ -27,6 +27,13 @@
       };
     });
   }
+  function mikHata(e) {
+    const ad = e && e.name;
+    if (ad === 'NotAllowedError') return 'Mikrofon izni verilmedi. iPhone: Ayarlar › Uygulamalar › Safari › Mikrofon › "Sor" ya da "İzin ver". Sonra uygulamayı kapatıp yeniden aç.';
+    if (ad === 'NotFoundError') return 'Mikrofon bulunamadı.';
+    if (ad === 'NotReadableError') return 'Mikrofon başka bir uygulama tarafından kullanılıyor. Diğer uygulamayı kapatıp tekrar dene.';
+    return 'Mikrofon açılamadı (' + (ad || (e && e.message) || 'bilinmeyen hata') + ').';
+  }
   function kaydet() { try { localStorage.setItem(ANAHTAR, JSON.stringify(D)); } catch (e) {} }
 
   function bildir(m) {
@@ -278,7 +285,7 @@
   }
   $('dinleKontrol').addEventListener('click', async () => {
     if (dinleZaman) { dinlemeDurdur(); return; }
-    try { await S.mikrofonAc(); } catch (e) { geriBildirim('kotu', 'Mikrofon açılamadı: ' + (e.message || e) + ' Tarayıcı ayarlarından izin ver.'); return; }
+    try { await S.mikrofonAc(); } catch (e) { geriBildirim('kotu', mikHata(e)); return; }
     const kr = $('kroma'); kr.hidden = false;
     kr.innerHTML = K.NOTA.map(n => `<div><i></i>${n}</div>`).join('');
     const cubuk = [...kr.querySelectorAll('i')];
@@ -531,7 +538,7 @@
   }
   $('akortDinle').addEventListener('click', async () => {
     if (akortDongu) { akortDurdur(); $('akortDurum').textContent = 'Durduruldu'; $('akortDurum').className = 'akort-durum'; return; }
-    try { await S.mikrofonAc(); } catch (e) { $('akortDurum').textContent = 'Mikrofon açılamadı. Tarayıcı ayarlarından izin ver.'; return; }
+    try { await S.mikrofonAc(); } catch (e) { $('akortDurum').textContent = mikHata(e); return; }
     $('akortDinle').textContent = '■ Durdur';
     $('akortDurum').textContent = 'Teli çal…';
     yumusak = null;
@@ -603,7 +610,7 @@
   }
   $('tanitBasla').addEventListener('click', async () => {
     akortDurdur();
-    try { await S.mikrofonAc(); } catch (e) { $('tanitHata').textContent = 'Mikrofon açılamadı. Tarayıcı ayarlarından izin ver.'; return; }
+    try { await S.mikrofonAc(); } catch (e) { $('tanitHata').textContent = mikHata(e); return; }
     $('tanitHata').textContent = '';
     tanit = { f0: null, liste: [], okuma: [], dongu: 0, asama: 'perde', isaret: [] };
     S.kayitBasla();

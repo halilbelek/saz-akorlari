@@ -11,7 +11,7 @@
   function kilidiAc() {
     if (kilitAcik) return;
     kilitAcik = true;
-    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+    try { if (navigator.audioSession && !mik) navigator.audioSession.type = 'playback'; } catch (e) {}
     try {
       sessizEl = new Audio(SESSIZ);
       sessizEl.loop = true; sessizEl.setAttribute('playsinline', '');
@@ -27,7 +27,7 @@
     document.addEventListener(o, () => { baglam(); kilidiAc(); }, { capture: true, passive: true }));
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { if (sessizEl) sessizEl.pause(); return; }
-    if (sessizEl) { const p = sessizEl.play(); if (p && p.catch) p.catch(() => {}); }
+    if (sessizEl && !mik) { const p = sessizEl.play(); if (p && p.catch) p.catch(() => {}); }
     if (ctx && ctx.state !== 'running') ctx.resume();
   });
 
@@ -113,8 +113,19 @@
   async function mikrofonAc() {
     if (mik) return mik;
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('Bu tarayıcı mikrofonu desteklemiyor.');
+    // iPhone: "playback" oturumunda mikrofon kapalıdır; kayıt için "play-and-record" gerekir
+    try { if (navigator.audioSession) navigator.audioSession.type = 'play-and-record'; } catch (e) {}
+    if (sessizEl) { try { sessizEl.pause(); } catch (e) {} }
     const c = baglam();
-    const akim = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    let akim;
+    try {
+      akim = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    } catch (e) {
+      // bazı cihazlar bu ayarları kabul etmez: basit istekle tekrar dene
+      if (e && e.name === 'NotAllowedError') throw e;
+      akim = await navigator.mediaDevices.getUserMedia({ audio: true });
+    }
+    if (c.state !== 'running') { try { await c.resume(); } catch (e) {} }
     const kaynak = c.createMediaStreamSource(akim);
     const analiz = c.createAnalyser();
     analiz.fftSize = 8192; analiz.smoothingTimeConstant = 0.6;
@@ -188,6 +199,8 @@
     mik.akim.getTracks().forEach(t => t.stop());
     try { mik.kaynak.disconnect(); } catch (e) {}
     mik = null;
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+    if (sessizEl && !document.hidden) { const p = sessizEl.play(); if (p && p.catch) p.catch(() => {}); }
   }
 
   // Ses yüksekliği tespiti (otokorelasyon + parabolik ara değer)
