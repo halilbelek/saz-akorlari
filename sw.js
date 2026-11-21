@@ -1,5 +1,5 @@
 // Çevrimdışı çalışma için önbellek
-const SURUM = 'saz-akorlari-v1';
+const SURUM = 'saz-akorlari-v2';
 const DOSYALAR = ['./', 'index.html', 'style.css', 'theory.js', 'ses.js', 'app.js', 'manifest.webmanifest',
   'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(SURUM).then(c => c.addAll(DOSYALAR))); self.skipWaiting(); });
